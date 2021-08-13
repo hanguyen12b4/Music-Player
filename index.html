@@ -62,13 +62,19 @@
         const btnNext = $('.btn-next');
         const btnRandom = $('.btn-random');
         const btnRepeat = $('.btn-repeat');
+        const PLAYER_STORAGE_KEY = 'F8-PLAYER';
 
 
         var app = {
+            config : JSON.parse(localStorage.getItem(PLAYER_STORAGE_KEY)) || {} ,
             isRepeat : false,
             isRandom : false,
             isPlaying : false,
             currentIndex: 0,
+            setConfig : function(key, value) {
+                this.config[key] = value;
+                localStorage.setItem(PLAYER_STORAGE_KEY, JSON.stringify(this.config));
+            },
             defineProperties: function() {
                 Object.defineProperty(this, 'currentSong',{
                     get: function() {
@@ -138,6 +144,14 @@
                 const songsLength = _this.songs.length;
                 const songsList = $$('.song');
 
+                var cdThumbAnimate = cdThumb.animate([
+                    {transform : 'rotate(360deg)' }
+                ] , {
+                    duration: 10000,
+                    iterations: Infinity
+                }) 
+                cdThumbAnimate.pause();
+
                 document.onscroll =  function() {
                     const scrollValue = window.scrollY ||document.documentElement.scrollTop;
                     const newCdWidth = cdWidth - scrollValue;
@@ -156,11 +170,13 @@
                 audio.onplay = function() {
                     _this.isPlaying= true;
                     player.classList.add('playing');
+                    cdThumbAnimate.play();
                 }
 
                 audio.onpause = function() {
                     _this.isPlaying= false;
                     player.classList.remove('playing');
+                    cdThumbAnimate.pause();
                 }
                 
                 audio.ontimeupdate = function() {
@@ -190,12 +206,14 @@
                 }
 
                 btnNext.onclick = function() {
+                    _this.scrollToActiveSong();
                     var oldIndexSong = _this.activeSong();
                     _this.deactive(oldIndexSong);
                     _this.nextSong();
                 }
 
                 btnPrev.onclick = function() {
+                    _this.scrollToActiveSong();
                     var oldIndexSong = _this.activeSong();
                     _this.deactive(oldIndexSong);
                     _this.prevSong();
@@ -203,10 +221,12 @@
 
                 btnRandom.onclick = function() {
                     _this.isRandom = this.classList.toggle("active");
+                    _this.setConfig('isRandom' , _this.isRandom);
                 }
 
                 btnRepeat.onclick = function() {
                     _this.isRepeat = this.classList.toggle("active");
+                    _this.setConfig('isRepeat' , _this.isRepeat);
                 }
 
                 songsList.forEach(function(song,index) {
@@ -219,6 +239,18 @@
                     }
                 })
 
+            },
+            loadConfig : function () {
+                this.isRandom = btnRandom.classList.toggle("active", this.config.isRandom);
+                this.isRepeat = btnRepeat.classList.toggle("active", this.config.isRepeat);
+            },
+            scrollToActiveSong : function() {
+                setTimeout(function() {
+                    $('.song.active').scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                },300);
             },
             renderPlaylist: function(){
                 const htmls = this.songs.map((song) => 
@@ -277,6 +309,7 @@
                 playListSongs[oldIndex].classList.remove('active');
             },
             run: function() {
+                this.loadConfig();
                 //Define properties for Object app(key value) 
                 this.defineProperties();
 
